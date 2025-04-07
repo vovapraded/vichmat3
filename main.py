@@ -1,4 +1,6 @@
 import math
+import requests
+from xml.etree import ElementTree
 
 # --- Функции для интегрирования ---
 def func1(x): return math.sin(x)
@@ -95,5 +97,34 @@ def main():
     print(f"Число разбиений: {2 * n}")
     print(f"Оценка погрешности: {error}")
 
+    wa = get_true_integral_wolfram(functions[f_choice][0], a, b, "UYKK3A-RH973TYRV2")
+    print(f"Истиное значение (Wolfram Alpha): {wa}")
+# --- Получение результата Wolfram Alpha ---
+def get_true_integral_wolfram(func_expr, a, b, app_id):
+
+    query = f"integrate {func_expr} from {a} to {b}"
+
+
+    url = "http://api.wolframalpha.com/v2/query"
+    params = {
+        "input": query,
+        "appid": app_id,
+        "format": "plaintext",
+        "output": "XML"
+    }
+
+    response = requests.get(url, params=params)
+    if response.status_code != 200:
+        return f"Wolfram API error: {response.status_code}"
+
+    tree = ElementTree.fromstring(response.content)
+
+    for pod in tree.findall(".//pod"):
+        for subpod in pod.findall(".//subpod"):
+            text = subpod.findtext("plaintext")
+            if text and ("≈" in text or "=" in text):
+                return text.strip()
+
+    return "Не удалось найти численный результат в ответе Wolfram Alpha"
 if __name__ == "__main__":
     main()
